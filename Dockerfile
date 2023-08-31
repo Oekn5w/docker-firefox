@@ -3,71 +3,58 @@
 #
 # https://github.com/jlesage/docker-firefox
 #
-
-# Build the membarrier check tool.
-FROM alpine:3.14 AS membarrier
-WORKDIR /tmp
-COPY membarrier_check.c .
-RUN apk --no-cache add build-base linux-headers
-RUN gcc -static -o membarrier_check membarrier_check.c
-RUN strip membarrier_check
+# Debian based because of upload issue
+#
 
 # Pull base image.
-FROM jlesage/baseimage-gui:alpine-3.18-v4.4.2
+FROM jlesage/baseimage-gui:debian-11-v4.4.2
 
 # Docker image version is provided via build arg.
 ARG DOCKER_IMAGE_VERSION=
 
 # Define software versions.
-ARG FIREFOX_VERSION=116.0.3-r0
-#ARG PROFILE_CLEANER_VERSION=2.36
-
-# Define software download URLs.
-#ARG PROFILE_CLEANER_URL=https://github.com/graysky2/profile-cleaner/raw/v${PROFILE_CLEANER_VERSION}/common/profile-cleaner.in
+ARG FIREFOX_VERSION=ESR-latestAtBuild
 
 # Define working directory.
 WORKDIR /tmp
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install Firefox.
 RUN \
-#    add-pkg --repository http://dl-cdn.alpinelinux.org/alpine/edge/main \
-#            --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
-#            --upgrade firefox=${FIREFOX_VERSION}
-     add-pkg firefox=${FIREFOX_VERSION}
+    apt-get update && \
+    apt-get install -y firefox-esr && \
+    apt-get clean
+
+# RUN \
+#     apt-get update && \
+#     apt-get install -y wget tar bzip2 firefox-esr && \
+#     apt-get clean && \
+#     wget -O firefoxsetup.tar.bz2 "https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US" && \
+#     tar -xvf firefoxsetup.tar.bz2 --directory /opt && \
+#     rm firefoxsetup.tar.bz2 && \
+#     true
 
 # Install extra packages.
 RUN \
-    add-pkg \
+    apt-get update && \
+    apt-get install -y \
         # WebGL support.
-        mesa-dri-gallium \
+        mesa-utils \
+        libgl1-mesa-dri \
+        libpci3 \
+        libegl-mesa0 \
+        llvm-dev xterm \
         # Icons used by folder/file selection window (when saving as).
         adwaita-icon-theme \
         # A font is needed.
-        font-dejavu \
+        fonts-dejavu \
         # The following package is used to send key presses to the X process.
         xdotool \
         && \
     # Remove unneeded icons.
     find /usr/share/icons/Adwaita -type d -mindepth 1 -maxdepth 1 -not -name 16x16 -not -name scalable -exec rm -rf {} ';' && \
-    true
-
-# Install profile-cleaner.
-#RUN \
-#    add-pkg --virtual build-dependencies curl && \
-#    curl -# -L -o /usr/bin/profile-cleaner {$PROFILE_CLEANER_URL} && \
-#    sed-patch 's/@VERSION@/'${PROFILE_CLEANER_VERSION}'/' /usr/bin/profile-cleaner && \
-#    chmod +x /usr/bin/profile-cleaner && \
-#    add-pkg \
-#        bash \
-#        file \
-#        coreutils \
-#        bc \
-#        parallel \
-#        sqlite \
-#        && \
-#    # Cleanup.
-#    del-pkg build-dependencies && \
-#    rm -rf /tmp/* /tmp/.[!.]*
+    apt-get clean
 
 # Generate and install favicons.
 RUN \
@@ -76,11 +63,11 @@ RUN \
 
 # Add files.
 COPY rootfs/ /
-COPY --from=membarrier /tmp/membarrier_check /usr/bin/
+# COPY --from=membarrier /tmp/membarrier_check /usr/bin/
 
 # Set internal environment variables.
 RUN \
-    set-cont-env APP_NAME "Firefox" && \
+    set-cont-env APP_NAME "Firefox ESR - VNC" && \
     set-cont-env APP_VERSION "$FIREFOX_VERSION" && \
     set-cont-env DOCKER_IMAGE_VERSION "$DOCKER_IMAGE_VERSION" && \
     true

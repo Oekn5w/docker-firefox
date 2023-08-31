@@ -20,6 +20,16 @@ Foundation and its subsidiary, Mozilla Corporation.
 
 ---
 
+## Debian Version
+
+The Debian based Firefox installation does not have the issue described in [Issue #75](https://github.com/jlesage/docker-firefox/issues/75). This version does currently not have a pushed image on Docker Hub, so you'll have to build it yourself:
+
+```
+docker build . -t firefox:debian
+```
+
+Some features will not work, for example WebGL.
+
 ## Table of Content
 
    * [Quick Start](#quick-start)
